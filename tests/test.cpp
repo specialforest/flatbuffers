@@ -20,7 +20,7 @@
 
 #include "monster_test_generated.h"
 
-#include <random>
+#include <cstdlib>
 
 using namespace MyGame::Example;
 
@@ -29,8 +29,8 @@ using namespace MyGame::Example;
   #define TEST_OUTPUT_LINE(...) \
     __android_log_print(ANDROID_LOG_INFO, "FlatBuffers", __VA_ARGS__)
 #else
-  #define TEST_OUTPUT_LINE(...) \
-    { printf(__VA_ARGS__); printf("\n"); }
+  #define TEST_OUTPUT_LINE(x) \
+    { printf x; printf("\n"); }
 #endif
 
 int testing_fails = 0;
@@ -38,10 +38,10 @@ int testing_fails = 0;
 template<typename T, typename U>
 void TestEq(T expval, U val, const char *exp, const char *file, int line) {
   if (expval != val) {
-    auto expval_str = flatbuffers::NumToString(expval);
-    auto val_str = flatbuffers::NumToString(val);
-    TEST_OUTPUT_LINE("TEST FAILED: %s:%d, %s (%s) != %s", file, line,
-                     exp, expval_str.c_str(), val_str.c_str());
+    const std::string &expval_str = flatbuffers::NumToString(expval);
+    const std::string &val_str = flatbuffers::NumToString(val);
+    TEST_OUTPUT_LINE(("TEST FAILED: %s:%d, %s (%s) != %s", file, line,
+                     exp, expval_str.c_str(), val_str.c_str()));
     assert(0);
     testing_fails++;
   }
@@ -63,12 +63,12 @@ void lcg_reset() { lcg_seed = 48271; }
 std::string CreateFlatBufferTest() {
   flatbuffers::FlatBufferBuilder builder;
 
-  auto vec = Vec3(1, 2, 3, 0, Color_Red, Test(10, 20));
+  Vec3 vec = Vec3(1, 2, 3, 0, Color_Red, Test(10, 20));
 
-  auto name = builder.CreateString("MyMonster");
+  flatbuffers::Offset<flatbuffers::String> name = builder.CreateString("MyMonster");
 
   unsigned char inv_data[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-  auto inventory = builder.CreateVector(inv_data, 10);
+  flatbuffers::Offset<flatbuffers::Vector<unsigned char> > inventory = builder.CreateVector(inv_data, 10);
 
   // Alternatively, create the vector first, and fill in data later:
   // unsigned char *inv_buf = nullptr;
@@ -77,14 +77,14 @@ std::string CreateFlatBufferTest() {
   // memcpy(inv_buf, inv_data, 10);
 
   Test tests[] = { Test(10, 20), Test(30, 40) };
-  auto testv = builder.CreateVectorOfStructs(tests, 2);
+  flatbuffers::Offset<flatbuffers::Vector<const Test *> > testv = builder.CreateVectorOfStructs(tests, 2);
 
   // create monster with very few fields set:
   // (same functionality as CreateMonster below, but sets fields manually)
   flatbuffers::Offset<Monster> mlocs[3];
-  auto fred = builder.CreateString("Fred");
-  auto barney = builder.CreateString("Barney");
-  auto wilma = builder.CreateString("Wilma");
+  flatbuffers::Offset<flatbuffers::String> fred = builder.CreateString("Fred");
+  flatbuffers::Offset<flatbuffers::String> barney = builder.CreateString("Barney");
+  flatbuffers::Offset<flatbuffers::String> wilma = builder.CreateString("Wilma");
   MonsterBuilder mb1(builder);
   mb1.add_name(fred);
   mlocs[0] = mb1.Finish();
@@ -99,13 +99,13 @@ std::string CreateFlatBufferTest() {
   flatbuffers::Offset<flatbuffers::String> strings[2];
   strings[0] = builder.CreateString("bob");
   strings[1] = builder.CreateString("fred");
-  auto vecofstrings = builder.CreateVector(strings, 2);
+  flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String> > > vecofstrings = builder.CreateVector(strings, 2);
 
   // Create an array of sorted tables, can be used with binary search when read:
-  auto vecoftables = builder.CreateVectorOfSortedTables(mlocs, 3);
+  flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Monster> > > vecoftables = builder.CreateVectorOfSortedTables(mlocs, 3);
 
   // shortcut for creating monster with all fields set:
-  auto mloc = CreateMonster(builder, &vec, 150, 80, name, inventory, Color_Blue,
+  flatbuffers::Offset<Monster> mloc = CreateMonster(builder, &vec, 150, 80, name, inventory, Color_Blue,
                             Any_Monster, mlocs[1].Union(), // Store a union.
                             testv, vecofstrings, vecoftables, 0);
 
@@ -113,7 +113,7 @@ std::string CreateFlatBufferTest() {
 
   #ifdef FLATBUFFERS_TEST_VERBOSE
   // print byte data for debugging:
-  auto p = builder.GetBufferPointer();
+  uint8_t *p = builder.GetBufferPointer();
   for (flatbuffers::uoffset_t i = 0; i < builder.GetSize(); i++)
     printf("%d ", p[i]);
   #endif
@@ -136,7 +136,7 @@ void AccessFlatBufferTest(const std::string &flatbuf) {
   TEST_EQ(MonsterBufferHasIdentifier(flatbuf.c_str()), true);
 
   // Access the buffer from the root.
-  auto monster = GetMonster(flatbuf.c_str());
+  const Monster *monster = GetMonster(flatbuf.c_str());
 
   TEST_EQ(monster->hp(), 80);
   TEST_EQ(monster->mana(), 150);  // default
@@ -145,35 +145,35 @@ void AccessFlatBufferTest(const std::string &flatbuf) {
   // which means accessors are not generated:
   // monster.friendly()
 
-  auto pos = monster->pos();
+  const Vec3 *pos = monster->pos();
   TEST_NOTNULL(pos);
   TEST_EQ(pos->z(), 3);
   TEST_EQ(pos->test3().a(), 10);
   TEST_EQ(pos->test3().b(), 20);
 
-  auto inventory = monster->inventory();
+  const flatbuffers::Vector<uint8_t> *inventory = monster->inventory();
   TEST_EQ(VectorLength(inventory), 10UL);  // Works even if inventory is null.
   TEST_NOTNULL(inventory);
   unsigned char inv_data[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-  for (auto it = inventory->begin(); it != inventory->end(); ++it)
+  for (flatbuffers::Vector<uint8_t>::const_iterator it = inventory->begin(); it != inventory->end(); ++it)
     TEST_EQ(*it, inv_data[it - inventory->begin()]);
 
   // Example of accessing a union:
   TEST_EQ(monster->test_type(), Any_Monster);  // First make sure which it is.
-  auto monster2 = reinterpret_cast<const Monster *>(monster->test());
+  const Monster *monster2 = reinterpret_cast<const Monster *>(monster->test());
   TEST_NOTNULL(monster2);
   TEST_EQ(strcmp(monster2->name()->c_str(), "Fred"), 0);
 
   // Example of accessing a vector of strings:
-  auto vecofstrings = monster->testarrayofstring();
+  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String> > *vecofstrings = monster->testarrayofstring();
   TEST_EQ(vecofstrings->Length(), 2U);
   TEST_EQ(strcmp(vecofstrings->Get(0)->c_str(), "bob"), 0);
   TEST_EQ(strcmp(vecofstrings->Get(1)->c_str(), "fred"), 0);
 
   // Example of accessing a vector of tables:
-  auto vecoftables = monster->testarrayoftables();
+  const flatbuffers::Vector<flatbuffers::Offset<Monster> > *vecoftables = monster->testarrayoftables();
   TEST_EQ(vecoftables->Length(), 3U);
-  for (auto it = vecoftables->begin(); it != vecoftables->end(); ++it)
+  for (flatbuffers::Vector<flatbuffers::Offset<Monster> >::const_iterator it = vecoftables->begin(); it != vecoftables->end(); ++it)
     TEST_EQ(strlen(it->name()->c_str()) >= 4, true);
   TEST_EQ(strcmp(vecoftables->Get(0)->name()->c_str(), "Barney"), 0);
   TEST_EQ(strcmp(vecoftables->Get(1)->name()->c_str(), "Fred"), 0);
@@ -188,15 +188,15 @@ void AccessFlatBufferTest(const std::string &flatbuf) {
   TEST_EQ(flatbuffers::AlignOf<Test>(), 2UL);
   TEST_EQ(sizeof(Test), 4UL);
 
-  auto tests = monster->test4();
+  const flatbuffers::Vector<const Test *> *tests = monster->test4();
   TEST_NOTNULL(tests);
-  auto test_0 = tests->Get(0);
-  auto test_1 = tests->Get(1);
+  const Test *test_0 = tests->Get(0);
+  const Test *test_1 = tests->Get(1);
   TEST_EQ(test_0->a(), 10);
   TEST_EQ(test_0->b(), 20);
   TEST_EQ(test_1->a(), 30);
   TEST_EQ(test_1->b(), 40);
-  for (auto it = tests->begin(); it != tests->end(); ++it) {
+  for (flatbuffers::Vector<const Test *>::const_iterator it = tests->begin(); it != tests->end(); ++it) {
     TEST_EQ(it->a() == 10 || it->a() == 30, true);  // Just testing iterators.
   }
 
@@ -254,7 +254,7 @@ void ParseProtoTest() {
 
   // Generate fbs.
   flatbuffers::GeneratorOptions opts;
-  auto fbs = flatbuffers::GenerateFBS(parser, "test", opts);
+  std::string fbs = flatbuffers::GenerateFBS(parser, "test", opts);
 
   // Ensure generated file is parsable.
   flatbuffers::Parser parser2;
@@ -304,10 +304,10 @@ void FuzzTest1() {
   // Generate num_fuzz_objects random objects each consisting of
   // fields_per_object fields, each of a random type.
   for (int i = 0; i < num_fuzz_objects; i++) {
-    auto start = builder.StartTable();
+    flatbuffers::uoffset_t start = builder.StartTable();
     for (flatbuffers::voffset_t f = 0; f < fields_per_object; f++) {
       int choice = lcg_rand() % test_values_max;
-      auto off = flatbuffers::FieldIndexToOffset(f);
+      flatbuffers::voffset_t off = flatbuffers::FieldIndexToOffset(f);
       switch (choice) {
         case 0:  builder.AddElement<uint8_t >(off, bool_val,   0); break;
         case 1:  builder.AddElement<int8_t  >(off, char_val,   0); break;
@@ -334,7 +334,7 @@ void FuzzTest1() {
   // expected values. We generate random objects in the same order
   // so this is deterministic.
   for (int i = 0; i < num_fuzz_objects; i++) {
-    auto table = reinterpret_cast<flatbuffers::Table *>(eob - objects[i]);
+	flatbuffers::Table *table = reinterpret_cast<flatbuffers::Table *>(eob - objects[i]);
     for (flatbuffers::voffset_t f = 0; f < fields_per_object; f++) {
       int choice = lcg_rand() % test_values_max;
       flatbuffers::voffset_t off = flatbuffers::FieldIndexToOffset(f);
@@ -355,6 +355,23 @@ void FuzzTest1() {
   }
 }
 
+const int instances_per_definition = 5;
+struct RndDef {
+  std::string instances[instances_per_definition];
+};
+
+// Since we're generating schema & and corresponding data in tandem,
+// this convenience function adds strings to both at once.
+void AddToSchemaAndInstances(
+		std::string &schema,
+		RndDef &definition,
+		const char *schema_add,
+		const char *instance_add) {
+  schema += schema_add;
+  for (int i = 0; i < instances_per_definition; i++)
+	  definition.instances[i] += instance_add;
+}
+
 // High level stress/fuzz test: generate a big schema and
 // matching json data in random combinations, then parse both,
 // generate json back from the binary, and compare with the original.
@@ -364,14 +381,8 @@ void FuzzTest2() {
   const int num_definitions = 30;
   const int num_struct_definitions = 5;  // Subset of num_definitions.
   const int fields_per_definition = 15;
-  const int instances_per_definition = 5;
 
   std::string schema = "namespace test;\n\n";
-
-  struct RndDef {
-    std::string instances[instances_per_definition];
-  };
-
   RndDef definitions[num_definitions];
 
   // We are going to generate num_definitions, the first
@@ -383,37 +394,28 @@ void FuzzTest2() {
   // being generated. We generate multiple instances such that when creating
   // hierarchy, we get some variety by picking one randomly.
   for (int definition = 0; definition < num_definitions; definition++) {
-    // Since we're generating schema & and corresponding data in tandem,
-    // this convenience function adds strings to both at once.
-    auto AddToSchemaAndInstances = [&](const char *schema_add,
-                                       const char *instance_add) {
-      schema += schema_add;
-      for (int i = 0; i < instances_per_definition; i++)
-        definitions[definition].instances[i] += instance_add;
-    };
     // Generate a default type if we can't generate something else.
-    auto Dummy = [&]() { AddToSchemaAndInstances("byte", "1"); };
+    // auto Dummy = [&]() { AddToSchemaAndInstances("byte", "1"); };
 
     std::string definition_name = "D" + flatbuffers::NumToString(definition);
 
     bool is_struct = definition < num_struct_definitions;
 
-    AddToSchemaAndInstances(
-      ((is_struct ? "struct " : "table ") + definition_name + " {\n").c_str(),
-      "{\n");
+    AddToSchemaAndInstances(schema, definitions[definition],
+    		((is_struct ? "struct " : "table ") + definition_name + " {\n").c_str(), "{\n");
 
     for (int field = 0; field < fields_per_definition; field++) {
       std::string field_name = "f" + flatbuffers::NumToString(field);
-      AddToSchemaAndInstances(("  " + field_name + ":").c_str(),
-                              (field_name + ": ").c_str());
+      AddToSchemaAndInstances(schema, definitions[definition],
+    		  ("  " + field_name + ":").c_str(), (field_name + ": ").c_str());
       // Pick random type:
       int base_type = lcg_rand() % (flatbuffers::BASE_TYPE_UNION + 1);
       switch (base_type) {
         case flatbuffers::BASE_TYPE_STRING:
           if (is_struct) {
-            Dummy();  // No strings in structs,
+        	AddToSchemaAndInstances(schema, definitions[definition], "byte", "1"); // No strings in structs
           } else {
-            AddToSchemaAndInstances("string", "\"hi\"");
+            AddToSchemaAndInstances(schema, definitions[definition], "string", "\"hi\"");
           }
           break;
         case flatbuffers::BASE_TYPE_NONE:
@@ -426,26 +428,26 @@ void FuzzTest2() {
             // that definition.
             int defref = lcg_rand() % definition;
             int instance = lcg_rand() % instances_per_definition;
-            AddToSchemaAndInstances(
+            AddToSchemaAndInstances(schema, definitions[definition],
               ("D" + flatbuffers::NumToString(defref)).c_str(),
               definitions[defref].instances[instance].c_str());
           } else {
             // If this is the first definition, we have no definition we can
             // refer to.
-            Dummy();
+            AddToSchemaAndInstances(schema, definitions[definition], "byte", "1");
           }
           break;
         default:
           // All the scalar types.
-          AddToSchemaAndInstances(
+          AddToSchemaAndInstances(schema, definitions[definition],
             flatbuffers::kTypeNames[base_type],
             flatbuffers::NumToString(lcg_rand() % 128).c_str());
       }
-      AddToSchemaAndInstances(
+      AddToSchemaAndInstances(schema, definitions[definition],
         ";\n",
         field == fields_per_definition - 1 ? "\n" : ",\n");
     }
-    AddToSchemaAndInstances("}\n\n", "}");
+    AddToSchemaAndInstances(schema, definitions[definition], "}\n\n", "}");
   }
 
   schema += "root_type D" + flatbuffers::NumToString(num_definitions - 1);
@@ -558,7 +560,7 @@ void ScientificTest() {
 
   // Test scientific notation numbers.
   TEST_EQ(parser.Parse("{ Y:0.0314159e+2 }"), true);
-  auto root = flatbuffers::GetRoot<float>(parser.builder_.GetBufferPointer());
+  const float *root = flatbuffers::GetRoot<float>(parser.builder_.GetBufferPointer());
   // root will point to the table, which is a 32bit vtable offset followed
   // by a float:
   TEST_EQ(sizeof(flatbuffers::soffset_t) == 4 &&  // Test assumes 32bit offsets
@@ -593,7 +595,7 @@ void UnicodeTest() {
 int main(int /*argc*/, const char * /*argv*/[]) {
   // Run our various test suites:
 
-  auto flatbuf = CreateFlatBufferTest();
+  std::string flatbuf = CreateFlatBufferTest();
   AccessFlatBufferTest(flatbuf);
 
   #ifndef __ANDROID__  // requires file access
@@ -610,10 +612,10 @@ int main(int /*argc*/, const char * /*argv*/[]) {
   UnicodeTest();
 
   if (!testing_fails) {
-    TEST_OUTPUT_LINE("ALL TESTS PASSED");
+    TEST_OUTPUT_LINE(("ALL TESTS PASSED"));
     return 0;
   } else {
-    TEST_OUTPUT_LINE("%d FAILED TESTS", testing_fails);
+    TEST_OUTPUT_LINE(("%d FAILED TESTS", testing_fails));
     return 1;
   }
 }

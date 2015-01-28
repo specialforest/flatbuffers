@@ -38,9 +38,9 @@ std::string GenerateFBS(const Parser &parser, const std::string &file_name,
   schema += "// Generated from " + file_name + ".proto\n\n";
   if (opts.include_dependence_headers) {
     int num_includes = 0;
-    for (auto it = parser.included_files_.begin();
+    for (std::map<std::string, bool>::const_iterator it = parser.included_files_.begin();
          it != parser.included_files_.end(); ++it) {
-      auto basename = flatbuffers::StripPath(
+      const std::string &basename = flatbuffers::StripPath(
                         flatbuffers::StripExtension(it->first));
       if (basename != file_name) {
         schema += "include \"" + basename + ".fbs\";\n";
@@ -50,34 +50,34 @@ std::string GenerateFBS(const Parser &parser, const std::string &file_name,
     if (num_includes) schema += "\n";
   }
   schema += "namespace ";
-  auto name_space = parser.namespaces_.back();
-  for (auto it = name_space->components.begin();
+  Namespace *name_space = parser.namespaces_.back();
+  for (std::vector<std::string>::const_iterator it = name_space->components.begin();
            it != name_space->components.end(); ++it) {
     if (it != name_space->components.begin()) schema += ".";
     schema += *it;
   }
   schema += ";\n\n";
   // Generate code for all the enum declarations.
-  for (auto it = parser.enums_.vec.begin();
+  for (std::vector<EnumDef *>::const_iterator it = parser.enums_.vec.begin();
            it != parser.enums_.vec.end(); ++it) {
     EnumDef &enum_def = **it;
     schema += "enum " + enum_def.name + " : ";
     schema += GenType(enum_def.underlying_type) + " {\n";
-    for (auto it = enum_def.vals.vec.begin();
+    for (std::vector<EnumVal *>::const_iterator it = enum_def.vals.vec.begin();
          it != enum_def.vals.vec.end(); ++it) {
-      auto &ev = **it;
+      EnumVal &ev = **it;
       schema += "  " + ev.name + " = " + NumToString(ev.value) + ",\n";
     }
     schema += "}\n\n";
   }
   // Generate code for all structs/tables.
-  for (auto it = parser.structs_.vec.begin();
+  for (std::vector<StructDef *>::const_iterator it = parser.structs_.vec.begin();
            it != parser.structs_.vec.end(); ++it) {
     StructDef &struct_def = **it;
     schema += "table " + struct_def.name + " {\n";
-    for (auto it = struct_def.fields.vec.begin();
+    for (std::vector<FieldDef *>::const_iterator it = struct_def.fields.vec.begin();
              it != struct_def.fields.vec.end(); ++it) {
-      auto &field = **it;
+      FieldDef &field = **it;
       schema += "  " + field.name + ":" + GenType(field.value.type);
       if (field.value.constant != "0") schema += " = " + field.value.constant;
       if (field.required) schema += " (required)";

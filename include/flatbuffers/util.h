@@ -147,8 +147,8 @@ inline std::string StripFileName(const std::string &filepath) {
 inline std::string ConCatPathFileName(const std::string &path,
                                       const std::string &filename) {
   std::string filepath = path;
-  if (path.length() && path.back() != kPathSeparator &&
-                       path.back() != kPosixPathSeparator)
+  if (path.length() && *path.rbegin() != kPathSeparator &&
+                       *path.rbegin() != kPosixPathSeparator)
     filepath += kPathSeparator;
   filepath += filename;
   return filepath;
@@ -157,7 +157,7 @@ inline std::string ConCatPathFileName(const std::string &path,
 // This function ensure a directory exists, by recursively
 // creating dirs for any parts of the path that don't exist yet.
 inline void EnsureDirExists(const std::string &filepath) {
-  auto parent = StripFileName(filepath);
+  const std::string &parent = StripFileName(filepath);
   if (parent.length()) EnsureDirExists(parent);
   #ifdef _WIN32
     _mkdir(filepath.c_str());

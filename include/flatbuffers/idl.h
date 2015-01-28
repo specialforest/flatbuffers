@@ -21,6 +21,7 @@
 #include <set>
 #include <memory>
 #include <functional>
+#include <boost/static_assert.hpp>
 
 #include "flatbuffers/flatbuffers.h"
 
@@ -88,8 +89,8 @@ enum BaseType {
 };
 
 #define FLATBUFFERS_TD(ENUM, IDLTYPE, CTYPE, JTYPE, GTYPE, NTYPE) \
-    static_assert(sizeof(CTYPE) <= sizeof(largest_scalar_t), \
-                  "define largest_scalar_t as " #CTYPE);
+  BOOST_STATIC_ASSERT(sizeof(CTYPE) <= sizeof(largest_scalar_t), \
+                  "define largest_scalar_t as " #CTYPE); \
   FLATBUFFERS_GEN_TYPES(FLATBUFFERS_TD)
 #undef FLATBUFFERS_TD
 
@@ -144,21 +145,21 @@ struct Value {
 template<typename T> class SymbolTable {
  public:
   ~SymbolTable() {
-    for (auto it = vec.begin(); it != vec.end(); ++it) {
+    for (typename std::vector<T *>::iterator it = vec.begin(); it != vec.end(); ++it) {
       delete *it;
     }
   }
 
   bool Add(const std::string &name, T *e) {
-    vec.emplace_back(e);
-    auto it = dict.find(name);
+    vec.push_back(e);
+    typename std::map<std::string, T *>::const_iterator it = dict.find(name);
     if (it != dict.end()) return true;
     dict[name] = e;
     return false;
   }
 
   T *Lookup(const std::string &name) const {
-    auto it = dict.find(name);
+	typename std::map<std::string, T *>::const_iterator it = dict.find(name);
     return it == dict.end() ? nullptr : it->second;
   }
 
@@ -209,7 +210,7 @@ struct StructDef : public Definition {
     {}
 
   void PadLastField(size_t minalign) {
-    auto padding = PaddingBytes(bytesize, minalign);
+	size_t padding = PaddingBytes(bytesize, minalign);
     bytesize += padding;
     if (fields.vec.size()) fields.vec.back()->padding = padding;
   }
@@ -249,7 +250,7 @@ struct EnumDef : public Definition {
   EnumDef() : is_union(false) {}
 
   EnumVal *ReverseLookup(int enum_idx, bool skip_union_default = true) {
-    for (auto it = vals.vec.begin() + static_cast<int>(is_union &&
+    for (std::vector<EnumVal *>::const_iterator it = vals.vec.begin() + static_cast<int>(is_union &&
                                                        skip_union_default);
              it != vals.vec.end(); ++it) {
       if ((*it)->value == enum_idx) {
@@ -286,7 +287,7 @@ class Parser {
   }
 
   ~Parser() {
-    for (auto it = namespaces_.begin(); it != namespaces_.end(); ++it) {
+    for (std::vector<Namespace *>::iterator it = namespaces_.begin(); it != namespaces_.end(); ++it) {
       delete *it;
     }
   }
@@ -359,7 +360,7 @@ class Parser {
   std::string attribute_;
   std::vector<std::string> doc_comment_;
 
-  std::vector<std::pair<Value, FieldDef *>> field_stack_;
+  std::vector<std::pair<Value, FieldDef *> > field_stack_;
   std::vector<uint8_t> struct_stack_;
 
   std::set<std::string> known_attributes_;

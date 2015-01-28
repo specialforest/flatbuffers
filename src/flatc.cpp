@@ -18,6 +18,8 @@
 #include "flatbuffers/idl.h"
 #include "flatbuffers/util.h"
 
+#include <limits>
+
 static void Error(const char *err, const char *obj = nullptr,
                   bool usage = false, bool show_exe_name = true);
 
@@ -27,7 +29,7 @@ bool GenerateBinary(const Parser &parser,
                     const std::string &path,
                     const std::string &file_name,
                     const GeneratorOptions & /*opts*/) {
-  auto ext = parser.file_extension_.length() ? parser.file_extension_ : "bin";
+  const std::string &ext = parser.file_extension_.length() ? parser.file_extension_ : "bin";
   return !parser.builder_.GetSize() ||
          flatbuffers::SaveFile(
            (path + file_name + "." + ext).c_str(),
@@ -56,10 +58,9 @@ bool GenerateTextFile(const Parser &parser,
 // This struct allows us to create a table of all possible output generators
 // for the various programming languages and formats we support.
 struct Generator {
-  bool (*generate)(const flatbuffers::Parser &parser,
-                   const std::string &path,
-                   const std::string &file_name,
-                   const flatbuffers::GeneratorOptions &opts);
+  typedef bool (*GeneratorFunction)(const flatbuffers::Parser &, const std::string &, const std::string &, const flatbuffers::GeneratorOptions &);
+  GeneratorFunction generate;
+
   const char *opt;
   const char *name;
   flatbuffers::GeneratorOptions::Language lang;
@@ -73,18 +74,18 @@ const Generator generators[] = {
   { flatbuffers::GenerateTextFile, "-t", "text",
     flatbuffers::GeneratorOptions::kMAX,
     "Generate text output for any data definitions" },
-  { flatbuffers::GenerateCPP,      "-c", "C++",
+  { static_cast<Generator::GeneratorFunction>(flatbuffers::GenerateCPP),      "-c", "C++",
     flatbuffers::GeneratorOptions::kMAX,
     "Generate C++ headers for tables/structs" },
-  { flatbuffers::GenerateGo,       "-g", "Go",
-    flatbuffers::GeneratorOptions::kMAX,
-    "Generate Go files for tables/structs" },
-  { flatbuffers::GenerateGeneral,  "-j", "Java",
-    flatbuffers::GeneratorOptions::kJava,
-    "Generate Java classes for tables/structs" },
-  { flatbuffers::GenerateGeneral,  "-n", "C#",
-    flatbuffers::GeneratorOptions::kCSharp,
-    "Generate C# classes for tables/structs" }
+//  { flatbuffers::GenerateGo,       "-g", "Go",
+//    flatbuffers::GeneratorOptions::kMAX,
+//    "Generate Go files for tables/structs" },
+//  { flatbuffers::GenerateGeneral,  "-j", "Java",
+//    flatbuffers::GeneratorOptions::kJava,
+//    "Generate Java classes for tables/structs" },
+//  { flatbuffers::GenerateGeneral,  "-n", "C#",
+//    flatbuffers::GeneratorOptions::kCSharp,
+//    "Generate C# classes for tables/structs" }
 };
 
 const char *program_name = NULL;
@@ -176,7 +177,7 @@ int main(int argc, const char *argv[]) {
 
   // Now process the files:
   flatbuffers::Parser parser(opts.strict_json, proto_mode);
-  for (auto file_it = filenames.begin();
+  for (std::vector<std::string>::const_iterator file_it = filenames.begin();
             file_it != filenames.end();
           ++file_it) {
       std::string contents;
@@ -191,7 +192,7 @@ int main(int argc, const char *argv[]) {
           reinterpret_cast<const uint8_t *>(contents.c_str()),
           contents.length());
       } else {
-        auto local_include_directory = flatbuffers::StripFileName(*file_it);
+        const std::string &local_include_directory = flatbuffers::StripFileName(*file_it);
         include_directories.push_back(local_include_directory.c_str());
         include_directories.push_back(nullptr);
         if (!parser.Parse(contents.c_str(), &include_directories[0],

@@ -21,7 +21,7 @@ set(FlatBuffers_Compiler_SRCS
   src/idl_parser.cpp
   src/idl_gen_cpp.cpp
   src/idl_gen_general.cpp
-  src/idl_gen_go.cpp
+#  src/idl_gen_go.cpp
   src/idl_gen_text.cpp
   src/idl_gen_fbs.cpp
   src/flatc.cpp
@@ -62,10 +62,10 @@ set(FlatBuffers_Sample_Text_SRCS
 
 if(APPLE)
   set(CMAKE_CXX_FLAGS
-    "${CMAKE_CXX_FLAGS} -std=c++11 -stdlib=libc++ -Wall -pedantic -Werror -Wextra")
+    "${CMAKE_CXX_FLAGS} -std=c++98 -stdlib=libc++ -Wall -pedantic -Werror -Wextra -Wno-long-long -Wno-c++0x-compat")
 elseif(CMAKE_COMPILER_IS_GNUCXX OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   set(CMAKE_CXX_FLAGS
-    "${CMAKE_CXX_FLAGS} -std=c++0x -Wall -pedantic -Werror -Wextra")
+    "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -pedantic -Werror -Wextra -Wno-long-long -Wno-c++0x-compat")
 endif()
 
 if(FLATBUFFERS_CODE_COVERAGE)

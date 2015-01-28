@@ -54,7 +54,7 @@ template<typename T> void Print(T val, Type type, int /*indent*/,
                                 std::string *_text) {
   std::string &text = *_text;
   if (type.enum_def && opts.output_enum_identifiers) {
-    auto enum_val = type.enum_def->ReverseLookup(static_cast<int>(val));
+	EnumVal *enum_val = type.enum_def->ReverseLookup(static_cast<int>(val));
     if (enum_val) {
       OutputIdentifier(enum_val->name, opts, _text);
       return;
@@ -211,7 +211,7 @@ static void GenStruct(const StructDef &struct_def, const Table *table,
   text += "{";
   int fieldout = 0;
   StructDef *union_sd = nullptr;
-  for (auto it = struct_def.fields.vec.begin();
+  for (std::vector<FieldDef *>::const_iterator it = struct_def.fields.vec.begin();
        it != struct_def.fields.vec.end();
        ++it) {
     FieldDef &fd = **it;
@@ -242,7 +242,7 @@ static void GenStruct(const StructDef &struct_def, const Table *table,
             break;
       }
       if (fd.value.type.base_type == BASE_TYPE_UTYPE) {
-        auto enum_val = fd.value.type.enum_def->ReverseLookup(
+    	EnumVal *enum_val = fd.value.type.enum_def->ReverseLookup(
                                  table->GetField<uint8_t>(fd.value.offset, 0));
         assert(enum_val);
         union_sd = enum_val->struct_def;
