@@ -703,14 +703,6 @@ class FlatBufferBuilder FLATBUFFERS_FINAL_CLASS {
     return CreateVectorOfStructs(v.data(), v.size());
   }
 
-  template<typename T>
-  bool KeyCompareLessThan(const Offset<T> &a, const Offset<T> &b)
-  {
-	T *table_a = reinterpret_cast<T *>(buf_.data_at(a.o));
-	T *table_b = reinterpret_cast<T *>(buf_.data_at(b.o));
-	return table_a->KeyCompareLessThan(table_b);
-  }
-
   template<typename T> Offset<Vector<Offset<T> > > CreateVectorOfSortedTables(
                                                      Offset<T> *v, size_t len) {
     std::sort(v, v + len, boost::bind(&FlatBufferBuilder::KeyCompareLessThan<T>, this, _1, _2));
@@ -754,6 +746,15 @@ class FlatBufferBuilder FLATBUFFERS_FINAL_CLASS {
                 kFileIdentifierLength);
     }
     PushElement(ReferTo(root.o));  // Location of root.
+  }
+
+ private:
+  template<typename T>
+  bool KeyCompareLessThan(const Offset<T> &a, const Offset<T> &b)
+  {
+	T *table_a = reinterpret_cast<T *>(buf_.data_at(a.o));
+	T *table_b = reinterpret_cast<T *>(buf_.data_at(b.o));
+	return table_a->KeyCompareLessThan(table_b);
   }
 
  private:
