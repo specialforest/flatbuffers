@@ -51,14 +51,6 @@ namespace std {
 	struct conditional<false, T, F> { typedef F type; };
 }
 
-#if __cplusplus <= 199711L && \
-    (!defined(_MSC_VER) || _MSC_VER < 1600) && \
-    (!defined(__GNUC__) || \
-      (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__ < 40603))
-  #error A C++11 compatible compiler is required for FlatBuffers.
-  #error __cplusplus _MSC_VER __GNUC__  __GNUC_MINOR__  __GNUC_PATCHLEVEL__
-#endif
-
 // The wire format uses a little endian encoding (since that's efficient for
 // the common platforms).
 #if !defined(FLATBUFFERS_LITTLEENDIAN)
@@ -85,14 +77,6 @@ namespace std {
 #define FLATBUFFERS_STRING_EXPAND(X) #X
 #define FLATBUFFERS_STRING(X) FLATBUFFERS_STRING_EXPAND(X)
 
-/*
-#if (!defined(_MSC_VER) || _MSC_VER > 1600) && \
-    (!defined(__GNUC__) || (__GNUC__ * 100 + __GNUC_MINOR__ >= 407))
-  #define FLATBUFFERS_FINAL_CLASS final
-#else
-  #define FLATBUFFERS_FINAL_CLASS
-#endif
-*/
 #define FLATBUFFERS_FINAL_CLASS
 
 namespace flatbuffers {
