@@ -62,10 +62,10 @@ set(FlatBuffers_Sample_Text_SRCS
 
 if(APPLE)
   set(CMAKE_CXX_FLAGS
-    "${CMAKE_CXX_FLAGS} -std=c++98 -stdlib=libc++ -Wall -pedantic -Werror -Wextra -Wno-long-long -Wno-c++0x-compat")
+    "${CMAKE_CXX_FLAGS} -stdlib=libc++ -Wall -pedantic -Werror -Wextra -Wno-long-long -Wno-c++0x-compat")
 elseif(CMAKE_COMPILER_IS_GNUCXX OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   set(CMAKE_CXX_FLAGS
-    "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -pedantic -Werror -Wextra -Wno-long-long -Wno-c++0x-compat")
+    "${CMAKE_CXX_FLAGS} -Wall -pedantic -Werror -Wextra -Wno-long-long -Wno-c++0x-compat")
 endif()
 
 if(FLATBUFFERS_CODE_COVERAGE)
