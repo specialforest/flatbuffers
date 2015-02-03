@@ -77,15 +77,15 @@ const Generator generators[] = {
   { static_cast<Generator::GeneratorFunction>(flatbuffers::GenerateCPP),      "-c", "C++",
     flatbuffers::GeneratorOptions::kMAX,
     "Generate C++ headers for tables/structs" },
-//  { flatbuffers::GenerateGo,       "-g", "Go",
-//    flatbuffers::GeneratorOptions::kMAX,
-//    "Generate Go files for tables/structs" },
-//  { flatbuffers::GenerateGeneral,  "-j", "Java",
-//    flatbuffers::GeneratorOptions::kJava,
-//    "Generate Java classes for tables/structs" },
-//  { flatbuffers::GenerateGeneral,  "-n", "C#",
-//    flatbuffers::GeneratorOptions::kCSharp,
-//    "Generate C# classes for tables/structs" }
+  { flatbuffers::GenerateGo,       "-g", "Go",
+    flatbuffers::GeneratorOptions::kMAX,
+    "Generate Go files for tables/structs" },
+  { flatbuffers::GenerateGeneral,  "-j", "Java",
+    flatbuffers::GeneratorOptions::kJava,
+    "Generate Java classes for tables/structs" },
+  { flatbuffers::GenerateGeneral,  "-n", "C#",
+    flatbuffers::GeneratorOptions::kCSharp,
+    "Generate C# classes for tables/structs" }
 };
 
 const char *program_name = NULL;

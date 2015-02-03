@@ -249,7 +249,7 @@ static void GetMemberOfVectorOfStruct(const StructDef &struct_def,
                                       const FieldDef &field,
                                       std::string *code_ptr) {
   std::string &code = *code_ptr;
-  auto vectortype = field.value.type.VectorType();
+  Type vectortype = field.value.type.VectorType();
 
   GenReceiver(struct_def, code_ptr);
   code += " " + MakeCamel(field.name);
@@ -276,7 +276,7 @@ static void GetMemberOfVectorOfNonStruct(const StructDef &struct_def,
                                          const FieldDef &field,
                                          std::string *code_ptr) {
   std::string &code = *code_ptr;
-  auto vectortype = field.value.type.VectorType();
+  Type vectortype = field.value.type.VectorType();
 
   GenReceiver(struct_def, code_ptr);
   code += " " + MakeCamel(field.name);
@@ -310,10 +310,10 @@ static void BeginBuilderArgs(const StructDef &struct_def,
 static void StructBuilderArgs(const StructDef &struct_def,
                               const char *nameprefix,
                               std::string *code_ptr) {
-  for (auto it = struct_def.fields.vec.begin();
+  for (std::vector<FieldDef *>::const_iterator it = struct_def.fields.vec.begin();
        it != struct_def.fields.vec.end();
        ++it) {
-    auto &field = **it;
+    FieldDef &field = **it;
     if (IsStruct(field.value.type)) {
       // Generate arguments for a struct inside a struct. To ensure names
       // don't clash, and to make it obvious these arguments are constructing
@@ -344,10 +344,10 @@ static void StructBuilderBody(const StructDef &struct_def,
   std::string &code = *code_ptr;
   code += "    builder.Prep(" + NumToString(struct_def.minalign) + ", ";
   code += NumToString(struct_def.bytesize) + ")\n";
-  for (auto it = struct_def.fields.vec.rbegin();
+  for (std::vector<FieldDef *>::const_reverse_iterator it = struct_def.fields.vec.rbegin();
        it != struct_def.fields.vec.rend();
        ++it) {
-    auto &field = **it;
+    FieldDef &field = **it;
     if (field.padding)
       code += "    builder.Pad(" + NumToString(field.padding) + ")\n";
     if (IsStruct(field.value.type)) {
@@ -416,9 +416,9 @@ static void BuildVectorOfTable(const StructDef &struct_def,
   code += MakeCamel(field.name);
   code += "Vector(builder *flatbuffers.Builder, numElems int) ";
   code += "flatbuffers.UOffsetT { return builder.StartVector(";
-  auto vector_type = field.value.type.VectorType();
-  auto alignment = InlineAlignment(vector_type);
-  auto elem_size = InlineSize(vector_type);
+  Type vector_type = field.value.type.VectorType();
+  size_t alignment = InlineAlignment(vector_type);
+  size_t elem_size = InlineSize(vector_type);
   code += NumToString(elem_size);
   code += ", numElems, " + NumToString(alignment);
   code += ")\n}\n";
@@ -463,7 +463,7 @@ static void GenStructAccessor(const StructDef &struct_def,
         GetStringField(struct_def, field, code_ptr);
         break;
       case BASE_TYPE_VECTOR: {
-        auto vectortype = field.value.type.VectorType();
+        Type vectortype = field.value.type.VectorType();
         if (vectortype.base_type == BASE_TYPE_STRUCT) {
           GetMemberOfVectorOfStruct(struct_def, field, code_ptr);
         } else {
@@ -488,13 +488,13 @@ static void GenTableBuilders(const StructDef &struct_def,
                              std::string *code_ptr) {
   GetStartOfTable(struct_def, code_ptr);
 
-  for (auto it = struct_def.fields.vec.begin();
+  for (std::vector<FieldDef *>::const_iterator it = struct_def.fields.vec.begin();
        it != struct_def.fields.vec.end();
        ++it) {
-    auto &field = **it;
+    FieldDef &field = **it;
     if (field.deprecated) continue;
 
-    auto offset = it - struct_def.fields.vec.begin();
+    size_t offset = it - struct_def.fields.vec.begin();
     BuildFieldOfTable(struct_def, field, offset, code_ptr);
     if (field.value.type.base_type == BASE_TYPE_VECTOR) {
       BuildVectorOfTable(struct_def, field, code_ptr);
@@ -520,10 +520,10 @@ static void GenStruct(const StructDef &struct_def,
   // Generate the Init method that sets the field in a pre-existing
   // accessor object. This is to allow object reuse.
   InitializeExisting(struct_def, code_ptr);
-  for (auto it = struct_def.fields.vec.begin();
+  for (std::vector<FieldDef *>::const_iterator it = struct_def.fields.vec.begin();
        it != struct_def.fields.vec.end();
        ++it) {
-    auto &field = **it;
+    FieldDef &field = **it;
     if (field.deprecated) continue;
 
     GenStructAccessor(struct_def, field, code_ptr);
@@ -544,10 +544,10 @@ static void GenEnum(const EnumDef &enum_def, std::string *code_ptr) {
 
   GenComment(enum_def.doc_comment, code_ptr);
   BeginEnum(code_ptr);
-  for (auto it = enum_def.vals.vec.begin();
+  for (std::vector<EnumVal *>::const_iterator it = enum_def.vals.vec.begin();
        it != enum_def.vals.vec.end();
        ++it) {
-    auto &ev = **it;
+    EnumVal &ev = **it;
     GenComment(ev.doc_comment, code_ptr, "\t");
     EnumMember(enum_def, ev, code_ptr);
   }
@@ -581,8 +581,8 @@ static bool SaveType(const Parser &parser, const Definition &def,
 
   std::string namespace_name;
   std::string namespace_dir = path;  // Either empty or ends in separator.
-  auto &namespaces = parser.namespaces_.back()->components;
-  for (auto it = namespaces.begin(); it != namespaces.end(); ++it) {
+  const std::vector<std::string> &namespaces = parser.namespaces_.back()->components;
+  for (std::vector<std::string>::const_iterator it = namespaces.begin(); it != namespaces.end(); ++it) {
     if (namespace_name.length()) {
       namespace_name += ".";
     }
@@ -649,7 +649,7 @@ bool GenerateGo(const Parser &parser,
                 const std::string &path,
                 const std::string & /*file_name*/,
                 const GeneratorOptions & /*opts*/) {
-  for (auto it = parser.enums_.vec.begin();
+  for (std::vector<EnumDef *>::const_iterator it = parser.enums_.vec.begin();
        it != parser.enums_.vec.end(); ++it) {
     std::string enumcode;
     go::GenEnum(**it, &enumcode);
@@ -657,7 +657,7 @@ bool GenerateGo(const Parser &parser,
       return false;
   }
 
-  for (auto it = parser.structs_.vec.begin();
+  for (std::vector<StructDef *>::const_iterator it = parser.structs_.vec.begin();
        it != parser.structs_.vec.end(); ++it) {
     std::string declcode;
     go::GenStruct(**it, &declcode, parser.root_struct_def);
